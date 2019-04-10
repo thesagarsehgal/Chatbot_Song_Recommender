@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+
+<style>
+
+
+.container_box {
+    border: 2px solid #dedede;
+    background-color: #f1f1f1;
+    border-radius: 10px;
+    padding: 10px;
+    /*margin: 1% ;*/
+}
+.msg_box{
+  border: 2px solid #dedede;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  padding: 10px;
+  margin: 1%;
+  min-height:18%;
+}
+.darker {
+    border-color: #ccc;
+    background-color: #ddd;
+}
+
+.container::after {
+    content: "";
+    clear: both;
+    display: table;
+}
+
+.container img {
+    float: left;
+    max-width: 60px;
+    width: 100%;
+    margin-right: 20px;
+    border-radius: 50%;
+}
+
+.container img.right {
+    float: right;
+    margin-left: 20px;
+    margin-right:0;
+}
+
+.time-right {
+    float: right;
+    color: #aaa;
+}
+
+.time-left {
+    float: left;
+    color: #999;
+}
+</style>
+</head>
+<body>
+  <center><h2>ChatBot</h2></center>
+
+<div class="container">
+  <div class="row">
+    <div class="col-sm-3 container_box" id="popular_songs" style="height:75vh;overflow-y:auto;">
+    </div>
+    <div class="col-sm-6 ">
+      <div class="container_box" id="main_container" style="height:75vh;overflow-y:auto;padding:0px;">
+        <div style="background-color:#411DDC;color:#FFFFFF;border-radius:10px;height:7%;text-align: center;" class="sticky-top" id="mood"><h3>EMOTION</h3></div>
+      </div>
+    </div>
+    <div class="col-sm-3 container_box" id="suggested_songs" style="height:75vh;overflow-y: auto;">
+    </div>
+  </div>
+</div>
+
+<div style="position:fixed;bottom:0;width:100%;background-color:#f1f1f1;padding:1%;margin:0px;border: 2px solid #dedede;">
+    <div class="row">
+      <div class="col-sm-9">
+        <input type="text" name="sentence" id="message-to-send" placeholder ="Type your message" class="input-group input-group-lg form-control" style="height:50px;" align="right" autocomplete="off" onkeydown = "if (event.keyCode == 13) document.getElementById('send').click()" >
+      </div>
+      <div class="col-sm-3">
+        <input type="submit" id="send" class="btn btn-primary btn-lg form-control-plaintext" style="display: inline-block;"  value="  Send Message  " onclick="sendmessage()" style="">
+      </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+  window.onload = function() {
+    document.getElementById("message-to-send").focus();
+  };
+  var counter=0;
+  function sendmessage(){
+    x=document.getElementById('message-to-send').value;
+    document.getElementById('message-to-send').value="";
+    y=document.getElementById("main_container");
+    y.innerHTML+="<div class='msg_box darker'><img src='https://cdn1.iconfinder.com/data/icons/mix-color-4/502/Untitled-1-512.png' alt='Avatar' style='width:auto;height:auto;object-fit: contain;' class='right' ><p style='float:right;vertical-aign:middle;'>"+x+"</p></div>"; 
+    $('#main_container').scrollTop($('#main_container')[0].scrollHeight);
+    document.getElementById("message-to-send").focus();
+    $.ajax({
+      type: "POST",
+      url: "{% url 'Chat:reply' %}",
+      contentType: "application/json",
+      data: JSON.stringify({ 'user': x }),
+      success: function (data) {
+        y.innerHTML+="<div class='msg_box'><img src='https://symphony.com/images/web/icon/apps/chat-bot_1024.png' alt='Avatar' style='width:auto;height:auto;'><p>"+data.message+"</p></div>";
+        s=document.getElementById("popular_songs");
+        console.log(data.urllink);
+        x=data.urllink;
+        n=data.names;
+        s.innerHTML="";
+        for (var i=0;i<x.length;i++){
+          // s.innerHTML+="<div class='msg_box darker'><iframe style='width:100%;height:100%;' src='https://www.youtube.com/embed/"+String(x[i])+"' frameborder='0'  ></iframe>";
+          s.innerHTML+="<div class='msg_box darker' style='vertical-aign:middle;'><center><a href='https://www.youtube.com/watch?v="+x[i]+"' target='_blank' onclick='suggestsong(this)'>"+n[i]+"</a></center></div>"
+          console.log(x[i]);
+        }
+        document.getElementById("mood").innerHTML="<h3>"+data.emotion.toUpperCase()+"</h3>";
+        var clr="";
+        if(data.emotion=="sadness"){
+          clr="#3E0444";
+        }
+        else if(data.emotion=="joy"){
+          clr="#EAF727";
+        }
+        else if(data.emotion=="anger"){
+          clr="#890000";
+        }
+        else if(data.emotion=="neutral"){
+          clr="#FF00FD";
+        }
+        document.getElementById("mood").style="background-color:"+clr+";color:#FFFFFF;border-radius:10px;height:7%;text-align: center;";
+        
+        $('#main_container').scrollTop($('#main_container')[0].scrollHeight);
+      }
+    });
+  }
+  function suggestsong(song){
+    console.log(song.innerHTML);
+    $.ajax({
+      type: "POST",
+      url: "{% url 'Chat:suggestsong' %}",
+      contentType: "application/json",
+      data: JSON.stringify({ 'song': song.innerHTML }),
+      success: function (data) {
+        s=document.getElementById("suggested_songs");
+        console.log(data.urllink);
+        x=data.urllink;
+        n=data.names;
+        s.innerHTML="";
+        for (var i=0;i<x.length;i++){
+          // s.innerHTML+="<div class='msg_box darker'><iframe style='width:100%;height:100%;' src='https://www.youtube.com/embed/"+String(x[i])+"' frameborder='0'  ></iframe>";
+          s.innerHTML+="<div class='msg_box darker' style='vertical-aign:middle;'><center><a href='https://www.youtube.com/watch?v="+x[i]+"' target='_blank'>"+n[i]+"</a></center></div>"
+          console.log(x[i]);
+        }
+      }
+    });
+  }
+</script>
+</body>
+</html>
